@@ -62,7 +62,8 @@ def select_audio_file():
         )
     ]
     answers = inquirer.prompt(questions)
-    return answers["audio"]
+    selected_file = answers["audio"]
+    return os.path.join(current_dir, selected_file)
 
 
 def transcribe_mac_voicememo(audio_path, model_size):
