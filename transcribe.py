@@ -1,11 +1,13 @@
 """Whisperを使用した音声ファイルの文字起こしスクリプト。
 
-このスクリプトは、カレントディレクトリ内の音声ファイルを探索し、
-ユーザーがインタラクティブにモデルと音声ファイルを選択して文字起こしを行います。
+ユーザーがインタラクティブにモデルを選択し、
+GUIダイアログを通じて任意のディレクトリから音声ファイルを選択して文字起こしを行います。
 """
 
 import os
 import time
+import tkinter as tk
+from tkinter import filedialog
 import inquirer
 import whisper
 
@@ -31,46 +33,44 @@ def select_model():
 
 
 def select_audio_file():
-    """カレントディレクトリ内の音声ファイルを探索し、矢印キーで選択します。
+    """GUIのファイルダイアログを開いて、任意の場所から音声ファイルを選択します。
 
     Returns:
-        str or None: 選択された音声ファイルのパス。音声ファイルが見つからない場合は None
+        str or None: 選択された音声ファイルのフルパス。キャンセル時は None
     """
-    # サポートする一般的な音声ファイルの拡張子
-    audio_extensions = (".m4a", ".mp3", ".wav", ".flac", ".aac", ".ogg", ".wma")
+    # Tkinterのルートウィンドウを初期化して非表示にする
+    root = tk.Tk()
+    root.withdraw()
+    
+    # ダイアログが他のウィンドウの後ろに隠れないように最前面に設定
+    root.attributes("-topmost", True)
 
-    # スクリプトの実行ディレクトリからファイルをリストアップ
-    current_dir = (
-        os.path.dirname(os.path.abspath(__file__)) if __file__ else os.getcwd()
+    print("\n音声ファイルを選択するダイアログを開いています...")
+    
+    # 選択可能な拡張子のフィルタ
+    filetypes = [
+        ("音声ファイル", "*.m4a;*.mp3;*.wav;*.flac;*.aac;*.ogg;*.wma"),
+        ("すべてのファイル", "*.*")
+    ]
+
+    # ファイルダイアログを表示してファイルパスを取得
+    filepath = filedialog.askopenfilename(
+        title="文字起こしする音声ファイルを選択してください",
+        filetypes=filetypes
     )
-    all_files = os.listdir(current_dir)
 
-    # 拡張子に一致する音声ファイルを抽出
-    audio_files = [f for f in all_files if f.lower().endswith(audio_extensions)]
-
-    if not audio_files:
-        print(
-            "エラー: スクリプトと同じディレクトリに音声ファイル（.m4a, .mp3 など）が見つかりません。"
-        )
+    if not filepath:
+        print("エラー: ファイルの選択がキャンセルされました。")
         return None
 
-    questions = [
-        inquirer.List(
-            "audio",
-            message="文字起こしする音声ファイルを矢印キーで選択してください（Enterで確定）",
-            choices=audio_files,
-        )
-    ]
-    answers = inquirer.prompt(questions)
-    selected_file = answers["audio"]
-    return os.path.join(current_dir, selected_file)
+    return filepath
 
 
 def transcribe_mac_voicememo(audio_path, model_size):
     """指定された音声ファイルをWhisperで文字起こしし、テキストファイルに保存します。
 
     Args:
-        audio_path (str): 文字起こし対象の音声ファイルのパス
+        audio_path (str): 文字起こし対象の音声ファイルのフルパス
         model_size (str): 使用するWhisperモデルのサイズ
     """
     # ファイルの存在確認
@@ -110,10 +110,10 @@ def transcribe_mac_voicememo(audio_path, model_size):
 
 
 if __name__ == "__main__":
-    # 1. 使用するWhisperモデルを選択
+    # 1. 使用するWhisperモデルをターミナルで選択
     selected_model = select_model()
 
-    # 2. 対象の音声ファイルを選択
+    # 2. 対象の音声ファイルをGUIで選択
     selected_audio = select_audio_file()
 
     # 音声ファイルが選択された場合のみ文字起こしを実行
