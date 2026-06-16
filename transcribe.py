@@ -32,11 +32,11 @@ def select_model():
     return answers["model"]
 
 
-def select_audio_file():
-    """GUIのファイルダイアログを開いて、任意の場所から音声ファイルを選択します。
+def select_audio_files():
+    """GUIのファイルダイアログを開いて、任意の場所から複数の音声ファイルを選択します。
 
     Returns:
-        str or None: 選択された音声ファイルのフルパス。キャンセル時は None
+        list of str: 選択された音声ファイルのフルパスのリスト。キャンセル時は空のリスト
     """
     # Tkinterのルートウィンドウを初期化して非表示にする
     root = tk.Tk()
@@ -53,69 +53,87 @@ def select_audio_file():
         ("すべてのファイル", "*.*")
     ]
 
-    # ファイルダイアログを表示してファイルパスを取得
-    filepath = filedialog.askopenfilename(
-        title="文字起こしする音声ファイルを選択してください",
+    # ファイルダイアログを表示してファイルパスを取得（複数選択を許可）
+    filepaths = filedialog.askopenfilenames(
+        title="文字起こしする音声ファイルを選択してください（複数選択可）",
         filetypes=filetypes
     )
 
-    if not filepath:
+    if not filepaths:
         print("エラー: ファイルの選択がキャンセルされました。")
-        return None
+        return []
 
-    return filepath
+    # タプルをリストに変換して返す
+    return list(filepaths)
 
 
-def transcribe_mac_voicememo(audio_path, model_size):
-    """指定された音声ファイルをWhisperで文字起こしし、テキストファイルに保存します。
+def transcribe_mac_voicememo(audio_paths, model_size):
+    """指定された音声ファイル（複数可）をWhisperで文字起こしし、それぞれのテキストファイルに保存します。
 
     Args:
-        audio_path (str): 文字起こし対象の音声ファイルのフルパス
+        audio_paths (str or list of str): 文字起こし対象の音声ファイルのフルパス、またはそのリスト
         model_size (str): 使用するWhisperモデルのサイズ
     """
-    # ファイルの存在確認
-    if not os.path.exists(audio_path):
-        print(f"エラー: {audio_path} が見つかりません。")
+    # 単一パスが渡された場合はリストに変換
+    if isinstance(audio_paths, str):
+        audio_paths = [audio_paths]
+
+    # 存在するファイルのみを対象にする
+    valid_paths = []
+    for path in audio_paths:
+        if os.path.exists(path):
+            valid_paths.append(path)
+        else:
+            print(f"エラー: {path} が見つかりません。")
+
+    if not valid_paths:
+        print("エラー: 処理可能な音声ファイルがありません。")
         return
 
-    # モデルのロード
+    # モデルのロード（複数ファイルでもロードは1回のみ）
     print(f"\n選択されたモデル '{model_size}' を読み込んでいます...")
     model = whisper.load_model(model_size)
 
-    # 文字起こしの実行
-    print(f"\n'{audio_path}' の文字起こしを開始します。")
-    print("==================================================")
-    start_time = time.time()
+    total_start_time = time.time()
 
-    # verbose=True で進行状況（セグメント）を順次標準出力に表示
-    result = model.transcribe(
-        audio_path,
-        language="ja",
-        verbose=True,
-        condition_on_previous_text=False,
-    )
+    for idx, audio_path in enumerate(valid_paths, 1):
+        print(f"\n[{idx}/{len(valid_paths)}] '{audio_path}' の文字起こしを開始します。")
+        print("==================================================")
+        start_time = time.time()
 
-    print("==================================================")
+        # verbose=True で進行状況（セグメント）を順次標準出力に表示
+        result = model.transcribe(
+            audio_path,
+            language="ja",
+            verbose=True,
+            condition_on_previous_text=False,
+        )
 
-    # 元の音声ファイルと同じベース名で .txt ファイル名を作成
-    output_filename = os.path.splitext(audio_path)[0] + ".txt"
+        print("==================================================")
 
-    # 文字起こし結果をテキストファイルとして保存
-    with open(output_filename, "w", encoding="utf-8") as f:
-        f.write(result["text"])
+        # 元の音声ファイルと同じベース名で .txt ファイル名を作成
+        output_filename = os.path.splitext(audio_path)[0] + ".txt"
 
-    elapsed_time = time.time() - start_time
-    print(f"\n処理が完了しました。（所要時間: {elapsed_time:.1f} 秒）")
-    print(f"結果は '{output_filename}' に保存されています。")
+        # 文字起こし結果をテキストファイルとして保存
+        with open(output_filename, "w", encoding="utf-8") as f:
+            f.write(result["text"])
+
+        elapsed_time = time.time() - start_time
+        print(f"ファイル処理が完了しました。（所要時間: {elapsed_time:.1f} 秒）")
+        print(f"結果は '{output_filename}' に保存されています。")
+
+    if len(valid_paths) > 1:
+        total_elapsed_time = time.time() - total_start_time
+        print(f"\nすべての処理が完了しました。（総所要時間: {total_elapsed_time:.1f} 秒）")
 
 
 if __name__ == "__main__":
     # 1. 使用するWhisperモデルをターミナルで選択
     selected_model = select_model()
 
-    # 2. 対象の音声ファイルをGUIで選択
-    selected_audio = select_audio_file()
+    # 2. 対象の音声ファイルをGUIで選択（複数選択可）
+    selected_audios = select_audio_files()
 
     # 音声ファイルが選択された場合のみ文字起こしを実行
-    if selected_audio:
-        transcribe_mac_voicememo(selected_audio, selected_model)
+    if selected_audios:
+        transcribe_mac_voicememo(selected_audios, selected_model)
