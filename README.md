@@ -367,3 +367,13 @@ Compress-Archive `
 ```
 
 生成したZIPはGitリポジトリにはコミットせず、GitHub Releasesから配布します。
+
+## License
+
+Transcribe is licensed under the MIT License.
+
+See [LICENSE](LICENSE) for details.
+
+Third-party software used by Transcribe is subject to its own
+license terms. See [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt)
+for details.
