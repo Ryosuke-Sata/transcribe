@@ -1,7 +1,9 @@
 """Whisperモデルの読み込みと文字起こし処理。"""
 
 import os
+import subprocess
 
+import numpy as np
 import whisper
 from whisper.audio import SAMPLE_RATE
 
@@ -35,6 +37,9 @@ class WhisperTranscriber:
         """
         音声ファイルを16kHz monoのNumPy配列として読み込む。
 
+        WindowsではFFmpeg実行時に
+        コンソールウィンドウを表示しない。
+
         Returns:
             tuple:
                 音声データ
@@ -49,8 +54,11 @@ class WhisperTranscriber:
                 f"{audio_path}"
             )
 
-        audio = whisper.load_audio(
-            audio_path
+        audio = (
+            WhisperTranscriber
+            ._load_audio_with_ffmpeg(
+                audio_path
+            )
         )
 
         duration = (
@@ -61,6 +69,90 @@ class WhisperTranscriber:
         return (
             audio,
             duration,
+        )
+
+    @staticmethod
+    def _load_audio_with_ffmpeg(
+        audio_path,
+    ):
+        """
+        FFmpegを使用して音声を
+        16kHz mono PCMへ変換する。
+
+        Whisperのload_audio()と同等の処理を行うが、
+        WindowsではCREATE_NO_WINDOWを指定する。
+        """
+
+        command = [
+            "ffmpeg",
+            "-nostdin",
+            "-threads",
+            "0",
+            "-i",
+            audio_path,
+            "-f",
+            "s16le",
+            "-ac",
+            "1",
+            "-acodec",
+            "pcm_s16le",
+            "-ar",
+            str(
+                SAMPLE_RATE
+            ),
+            "-",
+        ]
+
+        creation_flags = 0
+
+        if os.name == "nt":
+            creation_flags = getattr(
+                subprocess,
+                "CREATE_NO_WINDOW",
+                0,
+            )
+
+        try:
+            result = subprocess.run(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+                creationflags=(
+                    creation_flags
+                ),
+            )
+
+        except FileNotFoundError as exc:
+            raise RuntimeError(
+                "FFmpegを実行できませんでした。"
+            ) from exc
+
+        except subprocess.CalledProcessError as exc:
+            error_message = (
+                exc.stderr.decode(
+                    "utf-8",
+                    errors="replace",
+                )
+            )
+
+            raise RuntimeError(
+                "音声ファイルの読み込みに"
+                "失敗しました。"
+                "\n"
+                f"{error_message}"
+            ) from exc
+
+        return (
+            np.frombuffer(
+                result.stdout,
+                np.int16,
+            )
+            .flatten()
+            .astype(
+                np.float32
+            )
+            / 32768.0
         )
 
     def transcribe_audio(
