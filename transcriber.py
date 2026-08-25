@@ -6,18 +6,14 @@ import whisper
 
 
 class WhisperTranscriber:
-    """Whisperモデルの読み込みと文字起こしを担当するクラス。"""
+    """Whisperモデルの読み込みと文字起こしを担当する。"""
 
     def __init__(self):
         self.model = None
         self.model_name = None
 
     def load_model(self, model_name):
-        """
-        Whisperモデルを読み込む。
-
-        同じモデルがすでに読み込まれている場合は再読み込みしない。
-        """
+        """指定されたWhisperモデルを読み込む。"""
 
         if (
             self.model is not None
@@ -33,14 +29,18 @@ class WhisperTranscriber:
         1つの音声ファイルを文字起こしする。
 
         Args:
-            audio_path: 音声ファイルのパス
-            language:
-                "ja" -> 日本語
-                "ko" -> 韓国語
-                None -> Whisperによる自動判定
+            audio_path (str):
+                音声ファイルのパス
+
+            language (str | None):
+                "en"   英語
+                "ja"   日本語
+                "ko"   韓国語
+                None   自動判定
 
         Returns:
-            str: 保存したテキストファイルのパス
+            str:
+                保存されたテキストファイルのパス
         """
 
         if self.model is None:
@@ -58,7 +58,7 @@ class WhisperTranscriber:
             "condition_on_previous_text": False,
         }
 
-        # Noneの場合はWhisperに言語判定を任せる
+        # Noneの場合はWhisperによる自動言語判定
         if language is not None:
             options["language"] = language
 
@@ -67,6 +67,7 @@ class WhisperTranscriber:
             **options,
         )
 
+        # 音声ファイルと同じ場所に.txtを保存
         output_path = (
             os.path.splitext(audio_path)[0]
             + ".txt"
