@@ -1,7 +1,11 @@
 """TkinterによるGUI画面。"""
 
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import (
+    filedialog,
+    messagebox,
+    ttk,
+)
 
 
 class TranscribeView:
@@ -25,7 +29,15 @@ class TranscribeView:
     AUDIO_FILETYPES = [
         (
             "音声ファイル",
-            "*.m4a *.mp3 *.wav *.flac *.aac *.ogg *.wma",
+            (
+                "*.m4a "
+                "*.mp3 "
+                "*.wav "
+                "*.flac "
+                "*.aac "
+                "*.ogg "
+                "*.wma"
+            ),
         ),
         (
             "すべてのファイル",
@@ -33,50 +45,85 @@ class TranscribeView:
         ),
     ]
 
-    def __init__(self, root):
+    def __init__(
+        self,
+        root,
+    ):
         self.root = root
 
-        # 選択された音声ファイル
         self.audio_paths = []
-
-        # 現在文字起こし中か
         self._running = False
 
-        # -----------------------------
+        # =====================================
         # Tkinter変数
-        # -----------------------------
+        # =====================================
 
-        self.model_var = tk.StringVar(
-            value="small"
+        self.model_var = (
+            tk.StringVar(
+                value="small"
+            )
         )
 
-        self.language_var = tk.StringVar(
-            value="自動判定"
+        self.language_var = (
+            tk.StringVar(
+                value="自動判定"
+            )
         )
 
-        self.status_var = tk.StringVar(
-            value="音声ファイルを選択してください。"
+        self.status_var = (
+            tk.StringVar(
+                value=(
+                    "音声ファイルを"
+                    "選択してください。"
+                )
+            )
         )
 
-        self.progress_var = tk.DoubleVar(
-            value=0
+        self.progress_var = (
+            tk.DoubleVar(
+                value=0
+            )
         )
 
-        # -----------------------------
-        # ウィンドウ設定
-        # -----------------------------
+        self.progress_percent_var = (
+            tk.StringVar(
+                value="全体進捗: 0%"
+            )
+        )
+
+        self.time_progress_var = (
+            tk.StringVar(
+                value=(
+                    "処理位置: "
+                    "--:-- / --:--"
+                )
+            )
+        )
+
+        self.latest_text_var = (
+            tk.StringVar(
+                value=(
+                    "まだ文字起こし結果は"
+                    "ありません。"
+                )
+            )
+        )
+
+        # =====================================
+        # Window
+        # =====================================
 
         self.root.title(
             "Voice Transcription Tool"
         )
 
         self.root.geometry(
-            "720x620"
+            "780x720"
         )
 
         self.root.minsize(
+            650,
             600,
-            520,
         )
 
         self._build_ui()
@@ -95,22 +142,31 @@ class TranscribeView:
         )
 
         # =====================================
-        # タイトル
+        # Title
         # =====================================
 
         title_label = ttk.Label(
             main_frame,
-            text="Voice Transcription Tool",
-            font=("", 18, "bold"),
+            text=(
+                "Voice Transcription Tool"
+            ),
+            font=(
+                "",
+                18,
+                "bold",
+            ),
         )
 
         title_label.pack(
             anchor="w",
-            pady=(0, 18),
+            pady=(
+                0,
+                18,
+            ),
         )
 
         # =====================================
-        # 設定
+        # Settings
         # =====================================
 
         settings_frame = ttk.Frame(
@@ -119,10 +175,11 @@ class TranscribeView:
 
         settings_frame.pack(
             fill="x",
-            pady=(0, 14),
+            pady=(
+                0,
+                14,
+            ),
         )
-
-        # Whisperモデル
 
         ttk.Label(
             settings_frame,
@@ -133,21 +190,26 @@ class TranscribeView:
             sticky="w",
         )
 
-        self.model_combo = ttk.Combobox(
-            settings_frame,
-            textvariable=self.model_var,
-            values=self.MODELS,
-            state="readonly",
-            width=15,
+        self.model_combo = (
+            ttk.Combobox(
+                settings_frame,
+                textvariable=(
+                    self.model_var
+                ),
+                values=self.MODELS,
+                state="readonly",
+                width=15,
+            )
         )
 
         self.model_combo.grid(
             row=0,
             column=1,
-            padx=(10, 25),
+            padx=(
+                10,
+                25,
+            ),
         )
-
-        # 言語
 
         ttk.Label(
             settings_frame,
@@ -158,63 +220,88 @@ class TranscribeView:
             sticky="w",
         )
 
-        self.language_combo = ttk.Combobox(
-            settings_frame,
-            textvariable=self.language_var,
-            values=list(
-                self.LANGUAGES.keys()
-            ),
-            state="readonly",
-            width=15,
+        self.language_combo = (
+            ttk.Combobox(
+                settings_frame,
+                textvariable=(
+                    self.language_var
+                ),
+                values=list(
+                    self.LANGUAGES.keys()
+                ),
+                state="readonly",
+                width=15,
+            )
         )
 
         self.language_combo.grid(
             row=0,
             column=3,
-            padx=(10, 0),
+            padx=(
+                10,
+                0,
+            ),
         )
 
         # =====================================
-        # ファイル操作
+        # File selection
         # =====================================
 
-        file_button_frame = ttk.Frame(
-            main_frame
+        file_button_frame = (
+            ttk.Frame(
+                main_frame
+            )
         )
 
         file_button_frame.pack(
             fill="x",
-            pady=(0, 8),
+            pady=(
+                0,
+                8,
+            ),
         )
 
-        self.select_button = ttk.Button(
-            file_button_frame,
-            text="音声ファイルを選択",
-            command=self._select_audio_files,
+        self.select_button = (
+            ttk.Button(
+                file_button_frame,
+                text=(
+                    "音声ファイルを選択"
+                ),
+                command=(
+                    self
+                    ._select_audio_files
+                ),
+            )
         )
 
         self.select_button.pack(
             side="left"
         )
 
-        self.clear_button = ttk.Button(
-            file_button_frame,
-            text="選択をクリア",
-            command=self._clear_audio_files,
+        self.clear_button = (
+            ttk.Button(
+                file_button_frame,
+                text="選択をクリア",
+                command=(
+                    self
+                    ._clear_audio_files
+                ),
+            )
         )
 
         self.clear_button.pack(
             side="left",
-            padx=(8, 0),
+            padx=(
+                8,
+                0,
+            ),
         )
-
-        # =====================================
-        # 選択されたファイル
-        # =====================================
 
         ttk.Label(
             main_frame,
-            text="選択されたファイル:",
+            text=(
+                "選択されたファイル:"
+            ),
         ).pack(
             anchor="w"
         )
@@ -226,12 +313,17 @@ class TranscribeView:
         list_frame.pack(
             fill="both",
             expand=True,
-            pady=(6, 14),
+            pady=(
+                6,
+                14,
+            ),
         )
 
-        self.file_listbox = tk.Listbox(
-            list_frame,
-            height=8,
+        self.file_listbox = (
+            tk.Listbox(
+                list_frame,
+                height=7,
+            )
         )
 
         self.file_listbox.pack(
@@ -240,10 +332,16 @@ class TranscribeView:
             expand=True,
         )
 
-        file_scrollbar = ttk.Scrollbar(
-            list_frame,
-            orient="vertical",
-            command=self.file_listbox.yview,
+        file_scrollbar = (
+            ttk.Scrollbar(
+                list_frame,
+                orient="vertical",
+                command=(
+                    self
+                    .file_listbox
+                    .yview
+                ),
+            )
         )
 
         file_scrollbar.pack(
@@ -252,11 +350,13 @@ class TranscribeView:
         )
 
         self.file_listbox.configure(
-            yscrollcommand=file_scrollbar.set
+            yscrollcommand=(
+                file_scrollbar.set
+            )
         )
 
         # =====================================
-        # 開始 / 停止ボタン
+        # Start / Stop
         # =====================================
 
         action_frame = ttk.Frame(
@@ -265,14 +365,20 @@ class TranscribeView:
 
         action_frame.pack(
             fill="x",
-            pady=(0, 14),
+            pady=(
+                0,
+                14,
+            ),
         )
 
-        # 最初はファイルがないためdisabled
-        self.start_button = ttk.Button(
-            action_frame,
-            text="文字起こし開始",
-            state="disabled",
+        self.start_button = (
+            ttk.Button(
+                action_frame,
+                text=(
+                    "文字起こし開始"
+                ),
+                state="disabled",
+            )
         )
 
         self.start_button.pack(
@@ -282,49 +388,125 @@ class TranscribeView:
             ipady=5,
         )
 
-        self.stop_button = ttk.Button(
-            action_frame,
-            text="停止",
-            state="disabled",
+        self.stop_button = (
+            ttk.Button(
+                action_frame,
+                text="停止",
+                state="disabled",
+            )
         )
 
         self.stop_button.pack(
             side="left",
-            padx=(8, 0),
+            padx=(
+                8,
+                0,
+            ),
             ipady=5,
         )
 
         # =====================================
-        # プログレスバー
+        # Progress
         # =====================================
 
-        self.progress_bar = ttk.Progressbar(
-            main_frame,
-            variable=self.progress_var,
-            maximum=100,
-            mode="determinate",
+        progress_header = (
+            ttk.Frame(
+                main_frame
+            )
+        )
+
+        progress_header.pack(
+            fill="x",
+            pady=(
+                0,
+                5,
+            ),
+        )
+
+        ttk.Label(
+            progress_header,
+            textvariable=(
+                self
+                .progress_percent_var
+            ),
+        ).pack(
+            side="left"
+        )
+
+        ttk.Label(
+            progress_header,
+            textvariable=(
+                self.time_progress_var
+            ),
+        ).pack(
+            side="right"
+        )
+
+        self.progress_bar = (
+            ttk.Progressbar(
+                main_frame,
+                variable=(
+                    self.progress_var
+                ),
+                maximum=100,
+                mode="determinate",
+            )
         )
 
         self.progress_bar.pack(
             fill="x",
-            pady=(0, 8),
+            pady=(
+                0,
+                8,
+            ),
+        )
+
+        ttk.Label(
+            main_frame,
+            textvariable=(
+                self.status_var
+            ),
+            wraplength=730,
+        ).pack(
+            anchor="w",
+            pady=(
+                0,
+                12,
+            ),
         )
 
         # =====================================
-        # ステータス
+        # Latest transcription
         # =====================================
 
         ttk.Label(
             main_frame,
-            textvariable=self.status_var,
-            wraplength=650,
+            text=(
+                "最新の文字起こし:"
+            ),
         ).pack(
+            anchor="w"
+        )
+
+        latest_label = ttk.Label(
+            main_frame,
+            textvariable=(
+                self.latest_text_var
+            ),
+            wraplength=730,
+        )
+
+        latest_label.pack(
             anchor="w",
-            pady=(0, 8),
+            fill="x",
+            pady=(
+                5,
+                14,
+            ),
         )
 
         # =====================================
-        # ログ
+        # Log
         # =====================================
 
         ttk.Label(
@@ -341,7 +523,10 @@ class TranscribeView:
         log_frame.pack(
             fill="both",
             expand=True,
-            pady=(6, 0),
+            pady=(
+                6,
+                0,
+            ),
         )
 
         self.log_text = tk.Text(
@@ -357,10 +542,14 @@ class TranscribeView:
             expand=True,
         )
 
-        log_scrollbar = ttk.Scrollbar(
-            log_frame,
-            orient="vertical",
-            command=self.log_text.yview,
+        log_scrollbar = (
+            ttk.Scrollbar(
+                log_frame,
+                orient="vertical",
+                command=(
+                    self.log_text.yview
+                ),
+            )
         )
 
         log_scrollbar.pack(
@@ -369,22 +558,28 @@ class TranscribeView:
         )
 
         self.log_text.configure(
-            yscrollcommand=log_scrollbar.set
+            yscrollcommand=(
+                log_scrollbar.set
+            )
         )
 
     # =========================================
-    # ファイル操作
+    # File
     # =========================================
 
     def _select_audio_files(self):
-        """音声ファイルを選択する。"""
-
-        paths = filedialog.askopenfilenames(
-            title=(
-                "文字起こしする"
-                "音声ファイルを選択してください"
-            ),
-            filetypes=self.AUDIO_FILETYPES,
+        paths = (
+            filedialog
+            .askopenfilenames(
+                title=(
+                    "文字起こしする"
+                    "音声ファイルを"
+                    "選択してください"
+                ),
+                filetypes=(
+                    self.AUDIO_FILETYPES
+                ),
+            )
         )
 
         if not paths:
@@ -393,8 +588,10 @@ class TranscribeView:
         added_count = 0
 
         for path in paths:
-            # 重複登録しない
-            if path not in self.audio_paths:
+            if (
+                path
+                not in self.audio_paths
+            ):
                 self.audio_paths.append(
                     path
                 )
@@ -407,45 +604,39 @@ class TranscribeView:
                 added_count += 1
 
         self.status_var.set(
-            f"{len(self.audio_paths)} 個の"
-            "ファイルを選択しています。"
+            f"{len(self.audio_paths)} "
+            "個のファイルを"
+            "選択しています。"
         )
 
-        if added_count > 0:
+        if added_count:
             self.append_log(
-                f"{added_count} 個の"
-                "ファイルを追加しました。"
+                f"{added_count} "
+                "個のファイルを"
+                "追加しました。"
             )
 
         self._update_start_button()
 
     def _clear_audio_files(self):
-        """クリアボタンからファイル選択を解除する。"""
-
         if self._running:
             return
 
         self.clear_audio_files()
 
-        self.progress_var.set(
-            0
-        )
+        self.reset_progress_display()
 
         self.status_var.set(
-            "音声ファイルを選択してください。"
+            "音声ファイルを"
+            "選択してください。"
         )
 
         self.append_log(
-            "ファイル選択をクリアしました。"
+            "ファイル選択を"
+            "クリアしました。"
         )
 
     def clear_audio_files(self):
-        """
-        選択された音声ファイルをすべて解除する。
-
-        Controllerからも使用する。
-        """
-
         self.audio_paths.clear()
 
         self.file_listbox.delete(
@@ -456,42 +647,32 @@ class TranscribeView:
         self._update_start_button()
 
     # =========================================
-    # Controllerから取得する値
+    # Getter
     # =========================================
 
     def get_audio_paths(self):
-        """選択された音声ファイルを返す。"""
-
         return list(
             self.audio_paths
         )
 
     def get_model(self):
-        """選択されたWhisperモデルを返す。"""
-
-        return self.model_var.get()
-
-    def get_language(self):
-        """選択された言語コードを返す。"""
-
-        language_name = (
-            self.language_var.get()
+        return (
+            self.model_var.get()
         )
 
+    def get_language(self):
         return self.LANGUAGES[
-            language_name
+            self.language_var.get()
         ]
 
     # =========================================
-    # Controllerからイベントを設定
+    # Commands
     # =========================================
 
     def set_start_command(
         self,
         command,
     ):
-        """文字起こし開始ボタンの処理を設定する。"""
-
         self.start_button.configure(
             command=command
         )
@@ -500,8 +681,6 @@ class TranscribeView:
         self,
         command,
     ):
-        """停止ボタンの処理を設定する。"""
-
         self.stop_button.configure(
             command=command
         )
@@ -510,15 +689,13 @@ class TranscribeView:
         self,
         command,
     ):
-        """ウィンドウを閉じたときの処理を設定する。"""
-
         self.root.protocol(
             "WM_DELETE_WINDOW",
             command,
         )
 
     # =========================================
-    # ステータス
+    # Display
     # =========================================
 
     def set_status(
@@ -533,21 +710,69 @@ class TranscribeView:
         self,
         value,
     ):
+        value = max(
+            0,
+            min(
+                100,
+                value,
+            ),
+        )
+
         self.progress_var.set(
             value
         )
 
+        self.progress_percent_var.set(
+            f"全体進捗: "
+            f"{value:.0f}%"
+        )
+
+    def set_time_progress(
+        self,
+        current_seconds,
+        total_seconds,
+    ):
+        self.time_progress_var.set(
+            "処理位置: "
+            f"{self._format_duration(current_seconds)}"
+            " / "
+            f"{self._format_duration(total_seconds)}"
+        )
+
+    def set_latest_text(
+        self,
+        text,
+    ):
+        self.latest_text_var.set(
+            text
+        )
+
+    def reset_progress_display(self):
+        self.progress_var.set(
+            0
+        )
+
+        self.progress_percent_var.set(
+            "全体進捗: 0%"
+        )
+
+        self.time_progress_var.set(
+            "処理位置: "
+            "--:-- / --:--"
+        )
+
+        self.latest_text_var.set(
+            "まだ文字起こし結果は"
+            "ありません。"
+        )
+
     # =========================================
-    # プログレスバー
+    # Progress bar
     # =========================================
 
-    def start_indeterminate_progress(self):
-        """
-        進捗率が不明な処理用。
-
-        主にモデル読み込み時に使用する。
-        """
-
+    def start_indeterminate_progress(
+        self,
+    ):
         self.progress_bar.configure(
             mode="indeterminate"
         )
@@ -556,9 +781,9 @@ class TranscribeView:
             10
         )
 
-    def stop_indeterminate_progress(self):
-        """通常のプログレスバーに戻す。"""
-
+    def stop_indeterminate_progress(
+        self,
+    ):
         self.progress_bar.stop()
 
         self.progress_bar.configure(
@@ -566,15 +791,13 @@ class TranscribeView:
         )
 
     # =========================================
-    # ログ
+    # Log
     # =========================================
 
     def append_log(
         self,
         message,
     ):
-        """ログ欄にメッセージを追加する。"""
-
         self.log_text.configure(
             state="normal"
         )
@@ -584,7 +807,6 @@ class TranscribeView:
             message + "\n",
         )
 
-        # 最新ログまでスクロール
         self.log_text.see(
             tk.END
         )
@@ -594,22 +816,16 @@ class TranscribeView:
         )
 
     # =========================================
-    # GUI操作状態
+    # State
     # =========================================
 
     def set_running(
         self,
         running,
     ):
-        """
-        文字起こし中/停止中のGUI状態を変更する。
-        """
-
         self._running = running
 
         if running:
-            # 文字起こし中
-
             self.select_button.configure(
                 state="disabled"
             )
@@ -635,8 +851,6 @@ class TranscribeView:
             )
 
         else:
-            # 待機中
-
             self.select_button.configure(
                 state="normal"
             )
@@ -660,18 +874,11 @@ class TranscribeView:
             self._update_start_button()
 
     def set_stopping(self):
-        """停止処理中は停止ボタンも無効にする。"""
-
         self.stop_button.configure(
             state="disabled"
         )
 
     def _update_start_button(self):
-        """
-        ファイルが選択されている場合だけ
-        「文字起こし開始」を有効にする。
-        """
-
         if self._running:
             self.start_button.configure(
                 state="disabled"
@@ -680,17 +887,16 @@ class TranscribeView:
             return
 
         if self.audio_paths:
-            self.start_button.configure(
-                state="normal"
-            )
-
+            state = "normal"
         else:
-            self.start_button.configure(
-                state="disabled"
-            )
+            state = "disabled"
+
+        self.start_button.configure(
+            state=state
+        )
 
     # =========================================
-    # メッセージボックス
+    # Dialog
     # =========================================
 
     def show_info(
@@ -724,7 +930,7 @@ class TranscribeView:
         )
 
     # =========================================
-    # Tkinterイベント
+    # Tkinter
     # =========================================
 
     def schedule(
@@ -732,14 +938,41 @@ class TranscribeView:
         milliseconds,
         callback,
     ):
-        """指定時間後にcallbackを実行する。"""
-
         self.root.after(
             milliseconds,
             callback,
         )
 
     def close(self):
-        """GUIを終了する。"""
-
         self.root.destroy()
+
+    @staticmethod
+    def _format_duration(
+        seconds,
+    ):
+        seconds = max(
+            0,
+            int(seconds),
+        )
+
+        hours, remainder = divmod(
+            seconds,
+            3600,
+        )
+
+        minutes, seconds = divmod(
+            remainder,
+            60,
+        )
+
+        if hours:
+            return (
+                f"{hours:02d}:"
+                f"{minutes:02d}:"
+                f"{seconds:02d}"
+            )
+
+        return (
+            f"{minutes:02d}:"
+            f"{seconds:02d}"
+        )

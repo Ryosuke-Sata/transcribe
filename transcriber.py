@@ -1,12 +1,11 @@
-"""Whisperによる文字起こし処理。"""
-
-import os
+"""Whisperモデルの読み込みと音声区間の文字起こし。"""
 
 import whisper
+from whisper.audio import SAMPLE_RATE
 
 
 class WhisperTranscriber:
-    """Whisperモデルの読み込みと文字起こしを担当する。"""
+    """Whisperによるローカル文字起こしを担当する。"""
 
     def __init__(self):
         self.model = None
@@ -21,26 +20,42 @@ class WhisperTranscriber:
         ):
             return
 
-        self.model = whisper.load_model(model_name)
+        self.model = whisper.load_model(
+            model_name
+        )
+
         self.model_name = model_name
 
-    def transcribe_file(self, audio_path, language=None):
+    @staticmethod
+    def load_audio(audio_path):
         """
-        1つの音声ファイルを文字起こしする。
+        音声ファイルを16kHz・monoのNumPy配列として読み込む。
+        """
+
+        return whisper.load_audio(
+            audio_path
+        )
+
+    def transcribe_chunk(
+        self,
+        audio_chunk,
+        language=None,
+    ):
+        """
+        音声の1区間を文字起こしする。
 
         Args:
-            audio_path (str):
-                音声ファイルのパス
+            audio_chunk:
+                Whisperで読み込んだ音声データ
 
-            language (str | None):
-                "en"   英語
-                "ja"   日本語
-                "ko"   韓国語
-                None   自動判定
+            language:
+                None -> 自動判定
+                "en" -> 英語
+                "ja" -> 日本語
+                "ko" -> 韓国語
 
         Returns:
-            str:
-                保存されたテキストファイルのパス
+            Whisperのsegment一覧
         """
 
         if self.model is None:
@@ -48,38 +63,30 @@ class WhisperTranscriber:
                 "Whisperモデルが読み込まれていません。"
             )
 
-        if not os.path.isfile(audio_path):
-            raise FileNotFoundError(
-                f"ファイルが見つかりません: {audio_path}"
-            )
-
         options = {
             "verbose": False,
             "condition_on_previous_text": False,
+            "task": "transcribe",
         }
 
-        # Noneの場合はWhisperによる自動言語判定
         if language is not None:
             options["language"] = language
 
         result = self.model.transcribe(
-            audio_path,
+            audio_chunk,
             **options,
         )
 
-        # 音声ファイルと同じ場所に.txtを保存
-        output_path = (
-            os.path.splitext(audio_path)[0]
-            + ".txt"
+        return result.get(
+            "segments",
+            [],
         )
 
-        with open(
-            output_path,
-            "w",
-            encoding="utf-8",
-        ) as file:
-            file.write(
-                result["text"].strip()
-            )
+    @staticmethod
+    def get_duration_seconds(audio):
+        """読み込み済み音声の長さを秒で返す。"""
 
-        return output_path
+        return (
+            len(audio)
+            / SAMPLE_RATE
+        )

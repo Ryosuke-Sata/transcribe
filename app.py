@@ -1,4 +1,4 @@
-"""GUIとWhisper処理をつなぐController。"""
+"""GUIとWhisper WorkerをつなぐController。"""
 
 import multiprocessing
 import os
@@ -11,22 +11,20 @@ from worker import transcribe_worker
 class TranscribeApp:
     """文字起こしアプリ全体を制御する。"""
 
-    def __init__(self, root):
-        # -----------------------------
-        # GUI
-        # -----------------------------
-
-        self.view = TranscribeView(
-            root
+    def __init__(
+        self,
+        root,
+    ):
+        self.view = (
+            TranscribeView(
+                root
+            )
         )
 
-        # -----------------------------
-        # multiprocessing
-        # -----------------------------
-
-        # Windowsと同じspawn方式を利用する
+        # Windowsと同じspawn方式
         self.mp_context = (
-            multiprocessing.get_context(
+            multiprocessing
+            .get_context(
                 "spawn"
             )
         )
@@ -34,12 +32,7 @@ class TranscribeApp:
         self.worker_process = None
         self.event_queue = None
 
-        # 停止処理中かどうか
         self.stopping = False
-
-        # -----------------------------
-        # GUIイベント
-        # -----------------------------
 
         self.view.set_start_command(
             self.start_transcription
@@ -53,24 +46,22 @@ class TranscribeApp:
             self.close_application
         )
 
-        # Workerから送られてくるイベントを確認
         self.view.schedule(
             100,
             self._process_events,
         )
 
     # =========================================
-    # 文字起こし開始
+    # Start
     # =========================================
 
     def start_transcription(self):
-        """文字起こしを開始する。"""
-
         if self._is_running():
             return
 
         audio_paths = (
-            self.view.get_audio_paths()
+            self.view
+            .get_audio_paths()
         )
 
         if not audio_paths:
@@ -78,7 +69,8 @@ class TranscribeApp:
                 "ファイル未選択",
                 (
                     "文字起こしする"
-                    "音声ファイルを選択してください。"
+                    "音声ファイルを"
+                    "選択してください。"
                 ),
             )
 
@@ -94,42 +86,43 @@ class TranscribeApp:
 
         self.stopping = False
 
-        # Workerとの通信用Queue
         self.event_queue = (
             self.mp_context.Queue()
         )
 
-        # -----------------------------
-        # GUIを処理中状態へ
-        # -----------------------------
+        # =====================================
+        # GUI
+        # =====================================
 
         self.view.set_running(
             True
         )
 
-        self.view.set_progress(
-            0
-        )
+        self.view.reset_progress_display()
 
         self.view.set_status(
-            f"Whisperモデル '{model_name}' "
+            f"Whisperモデル "
+            f"'{model_name}' "
             "を読み込んでいます..."
         )
 
         self.view.append_log(
-            f"Whisperモデル '{model_name}' "
+            f"Whisperモデル "
+            f"'{model_name}' "
             "の読み込みを開始します。"
         )
 
         self.view.start_indeterminate_progress()
 
-        # -----------------------------
-        # Worker Process作成
-        # -----------------------------
+        # =====================================
+        # Process
+        # =====================================
 
         self.worker_process = (
             self.mp_context.Process(
-                target=transcribe_worker,
+                target=(
+                    transcribe_worker
+                ),
                 args=(
                     self.event_queue,
                     audio_paths,
@@ -157,18 +150,17 @@ class TranscribeApp:
                 "エラー",
                 (
                     "文字起こし処理を"
-                    "開始できませんでした。\n\n"
+                    "開始できませんでした。"
+                    "\n\n"
                     f"{exc}"
                 ),
             )
 
     # =========================================
-    # 停止
+    # Stop
     # =========================================
 
     def stop_transcription(self):
-        """現在実行中の文字起こしを停止する。"""
-
         if not self._is_running():
             return
 
@@ -177,28 +169,28 @@ class TranscribeApp:
         self.view.set_stopping()
 
         self.view.set_status(
-            "文字起こしを停止しています..."
+            "文字起こしを"
+            "停止しています..."
         )
 
         self.view.append_log(
-            "文字起こしの停止を開始します。"
+            "文字起こしの"
+            "停止を開始します。"
         )
 
-        # Whisperを実行しているProcessを終了する
         self.worker_process.terminate()
 
-        # Processが実際に終了したか確認する
         self.view.schedule(
             100,
             self._wait_for_stop,
         )
 
     def _wait_for_stop(self):
-        """Worker Processが終了するまで確認する。"""
-
         if (
-            self.worker_process is not None
-            and self.worker_process.is_alive()
+            self.worker_process
+            is not None
+            and self.worker_process
+            .is_alive()
         ):
             self.view.schedule(
                 100,
@@ -213,196 +205,117 @@ class TranscribeApp:
 
         self.view.stop_indeterminate_progress()
 
-        # 停止後はファイル選択も解除
+        # 誤再実行防止
         self.view.clear_audio_files()
-
-        self.view.set_progress(
-            0
-        )
 
         self.view.set_running(
             False
         )
 
         self.view.set_status(
-            "文字起こしを中断しました。"
+            "文字起こしを"
+            "中断しました。"
         )
 
         self.view.append_log(
-            "文字起こしを中断しました。"
+            "文字起こしを"
+            "中断しました。"
+        )
+
+        self.view.append_log(
+            "停止時点までに"
+            "確定した文章は"
+            "txtへ保存されています。"
         )
 
     # =========================================
-    # Workerイベント処理
+    # Events
     # =========================================
 
     def _process_events(self):
-        """
-        Worker Processから届いたイベントを
-        Tkinterへ反映する。
-        """
-
-        # 停止処理中は古いイベントを処理しない
         if not self.stopping:
             self._read_worker_events()
 
-        # 100msごとに継続して確認
         self.view.schedule(
             100,
             self._process_events,
         )
 
     def _read_worker_events(self):
-        """Queueに入っているWorkerイベントを処理する。"""
-
         if self.event_queue is None:
             return
 
         try:
             while True:
                 event = (
-                    self.event_queue.get_nowait()
+                    self.event_queue
+                    .get_nowait()
                 )
 
-                event_type = event[0]
+                event_type = (
+                    event[0]
+                )
 
-                # ---------------------------------
-                # モデル読み込み完了
-                # ---------------------------------
-
-                if event_type == "model_loaded":
-                    model_name = event[1]
-
-                    self.view.stop_indeterminate_progress()
-
-                    self.view.set_progress(
-                        0
+                if (
+                    event_type
+                    == "model_loaded"
+                ):
+                    self._handle_model_loaded(
+                        event
                     )
 
-                    self.view.set_status(
-                        f"モデル '{model_name}' "
-                        "の読み込みが完了しました。"
+                elif (
+                    event_type
+                    == "file_started"
+                ):
+                    self._handle_file_started(
+                        event
                     )
 
-                    self.view.append_log(
-                        f"モデル '{model_name}' "
-                        "の読み込みが完了しました。"
+                elif (
+                    event_type
+                    == "file_progress"
+                ):
+                    self._handle_file_progress(
+                        event
                     )
 
-                # ---------------------------------
-                # ファイル処理開始
-                # ---------------------------------
-
-                elif event_type == "file_started":
-                    (
-                        index,
-                        total,
-                        audio_path,
-                    ) = event[1:]
-
-                    filename = (
-                        os.path.basename(
-                            audio_path
-                        )
+                elif (
+                    event_type
+                    == "text_saved"
+                ):
+                    self._handle_text_saved(
+                        event
                     )
 
-                    self.view.set_status(
-                        f"[{index}/{total}] "
-                        f"{filename} を"
-                        "文字起こししています..."
+                elif (
+                    event_type
+                    == "file_finished"
+                ):
+                    self._handle_file_finished(
+                        event
                     )
 
-                    self.view.append_log(
-                        f"[{index}/{total}] "
-                        f"{filename} "
-                        "の処理を開始しました。"
+                elif (
+                    event_type
+                    == "file_error"
+                ):
+                    self._handle_file_error(
+                        event
                     )
 
-                # ---------------------------------
-                # ファイル処理完了
-                # ---------------------------------
-
-                elif event_type == "file_finished":
-                    (
-                        index,
-                        total,
-                        audio_path,
-                        output_path,
-                    ) = event[1:]
-
-                    filename = (
-                        os.path.basename(
-                            audio_path
-                        )
-                    )
-
-                    progress = (
-                        index
-                        / total
-                        * 100
-                    )
-
-                    self.view.set_progress(
-                        progress
-                    )
-
-                    self.view.set_status(
-                        f"[{index}/{total}] "
-                        f"{filename} "
-                        "の処理が完了しました。"
-                    )
-
-                    self.view.append_log(
-                        f"保存完了: {output_path}"
-                    )
-
-                # ---------------------------------
-                # ファイル単位エラー
-                # ---------------------------------
-
-                elif event_type == "file_error":
-                    (
-                        index,
-                        total,
-                        audio_path,
-                        error_message,
-                    ) = event[1:]
-
-                    filename = (
-                        os.path.basename(
-                            audio_path
-                        )
-                    )
-
-                    progress = (
-                        index
-                        / total
-                        * 100
-                    )
-
-                    self.view.set_progress(
-                        progress
-                    )
-
-                    self.view.append_log(
-                        f"エラー: {filename}\n"
-                        f"{error_message}"
-                    )
-
-                # ---------------------------------
-                # 全処理完了
-                # ---------------------------------
-
-                elif event_type == "all_finished":
+                elif (
+                    event_type
+                    == "all_finished"
+                ):
                     self._finish_transcription()
 
                     break
 
-                # ---------------------------------
-                # 致命的エラー
-                # ---------------------------------
-
-                elif event_type == "fatal_error":
+                elif (
+                    event_type
+                    == "fatal_error"
+                ):
                     self._handle_fatal_error(
                         event[1]
                     )
@@ -413,60 +326,281 @@ class TranscribeApp:
             pass
 
     # =========================================
-    # 正常終了
+    # Model
+    # =========================================
+
+    def _handle_model_loaded(
+        self,
+        event,
+    ):
+        model_name = event[1]
+
+        self.view.stop_indeterminate_progress()
+
+        self.view.set_progress(
+            0
+        )
+
+        self.view.set_status(
+            f"モデル '{model_name}' "
+            "の読み込みが"
+            "完了しました。"
+        )
+
+        self.view.append_log(
+            f"モデル '{model_name}' "
+            "の読み込みが"
+            "完了しました。"
+        )
+
+    # =========================================
+    # File start
+    # =========================================
+
+    def _handle_file_started(
+        self,
+        event,
+    ):
+        (
+            _,
+            file_index,
+            total_files,
+            audio_path,
+            output_path,
+            total_seconds,
+        ) = event
+
+        filename = os.path.basename(
+            audio_path
+        )
+
+        overall_progress = (
+            (
+                file_index
+                - 1
+            )
+            / total_files
+            * 100
+        )
+
+        self.view.set_progress(
+            overall_progress
+        )
+
+        self.view.set_time_progress(
+            0,
+            total_seconds,
+        )
+
+        self.view.set_status(
+            f"[{file_index}/"
+            f"{total_files}] "
+            f"{filename} を"
+            "文字起こししています..."
+        )
+
+        self.view.append_log(
+            f"[{file_index}/"
+            f"{total_files}] "
+            f"{filename} "
+            "の処理を開始しました。"
+        )
+
+        self.view.append_log(
+            f"逐次保存先: "
+            f"{output_path}"
+        )
+
+    # =========================================
+    # Progress
+    # =========================================
+
+    def _handle_file_progress(
+        self,
+        event,
+    ):
+        (
+            _,
+            file_index,
+            total_files,
+            _audio_path,
+            processed_seconds,
+            total_seconds,
+        ) = event
+
+        if total_seconds > 0:
+            file_ratio = (
+                processed_seconds
+                / total_seconds
+            )
+        else:
+            file_ratio = 1.0
+
+        overall_progress = (
+            (
+                file_index
+                - 1
+                + file_ratio
+            )
+            / total_files
+            * 100
+        )
+
+        self.view.set_progress(
+            overall_progress
+        )
+
+        self.view.set_time_progress(
+            processed_seconds,
+            total_seconds,
+        )
+
+    # =========================================
+    # Saved text
+    # =========================================
+
+    def _handle_text_saved(
+        self,
+        event,
+    ):
+        line = event[5]
+
+        self.view.set_latest_text(
+            line
+        )
+
+    # =========================================
+    # File finish
+    # =========================================
+
+    def _handle_file_finished(
+        self,
+        event,
+    ):
+        (
+            _,
+            file_index,
+            total_files,
+            audio_path,
+            output_path,
+            total_seconds,
+        ) = event
+
+        filename = os.path.basename(
+            audio_path
+        )
+
+        overall_progress = (
+            file_index
+            / total_files
+            * 100
+        )
+
+        self.view.set_progress(
+            overall_progress
+        )
+
+        self.view.set_time_progress(
+            total_seconds,
+            total_seconds,
+        )
+
+        self.view.set_status(
+            f"[{file_index}/"
+            f"{total_files}] "
+            f"{filename} "
+            "の処理が"
+            "完了しました。"
+        )
+
+        self.view.append_log(
+            f"保存完了: "
+            f"{output_path}"
+        )
+
+    # =========================================
+    # File error
+    # =========================================
+
+    def _handle_file_error(
+        self,
+        event,
+    ):
+        (
+            _,
+            file_index,
+            total_files,
+            audio_path,
+            error_message,
+        ) = event
+
+        filename = os.path.basename(
+            audio_path
+        )
+
+        overall_progress = (
+            file_index
+            / total_files
+            * 100
+        )
+
+        self.view.set_progress(
+            overall_progress
+        )
+
+        self.view.append_log(
+            f"エラー: {filename}"
+            "\n"
+            f"{error_message}"
+        )
+
+    # =========================================
+    # Finish
     # =========================================
 
     def _finish_transcription(self):
-        """すべての文字起こしが終了した後の処理。"""
-
         self.view.stop_indeterminate_progress()
 
         self.view.set_progress(
             100
         )
 
-        # ---------------------------------
-        # 重要
-        #
-        # 完了したファイルを自動的に解除する
-        # ---------------------------------
-
+        # 完了後の誤再実行防止
         self.view.clear_audio_files()
 
-        # GUIを待機状態へ戻す
         self.view.set_running(
             False
         )
 
         self.view.set_status(
-            "すべての文字起こし処理が完了しました。"
+            "すべての文字起こし"
+            "処理が完了しました。"
         )
 
         self.view.append_log(
-            "すべての処理が完了しました。"
+            "すべての処理が"
+            "完了しました。"
         )
 
         self.view.show_info(
             "完了",
-            "文字起こし処理が完了しました。",
+            "文字起こし処理が"
+            "完了しました。",
         )
 
-        # 終了したProcessを回収
         self.view.schedule(
             100,
             self._cleanup_finished_worker,
         )
 
     # =========================================
-    # エラー
+    # Fatal error
     # =========================================
 
     def _handle_fatal_error(
         self,
         error_message,
     ):
-        """モデル読み込みなどの致命的エラーを処理する。"""
-
         self.view.stop_indeterminate_progress()
 
         self.view.set_progress(
@@ -482,15 +616,17 @@ class TranscribeApp:
         )
 
         self.view.append_log(
-            "致命的なエラー:\n"
+            "致命的なエラー:"
+            "\n"
             f"{error_message}"
         )
 
         self.view.show_error(
             "エラー",
             (
-                "文字起こしを開始"
-                "できませんでした。\n\n"
+                "文字起こしを"
+                "開始できませんでした。"
+                "\n\n"
                 f"{error_message}"
             ),
         )
@@ -501,15 +637,17 @@ class TranscribeApp:
         )
 
     # =========================================
-    # Process後始末
+    # Cleanup
     # =========================================
 
-    def _cleanup_finished_worker(self):
-        """終了したWorker Processを回収する。"""
-
+    def _cleanup_finished_worker(
+        self,
+    ):
         if (
-            self.worker_process is not None
-            and self.worker_process.is_alive()
+            self.worker_process
+            is not None
+            and self.worker_process
+            .is_alive()
         ):
             self.view.schedule(
                 100,
@@ -521,9 +659,10 @@ class TranscribeApp:
         self._cleanup_worker()
 
     def _cleanup_worker(self):
-        """Worker ProcessとQueueを破棄する。"""
-
-        if self.worker_process is not None:
+        if (
+            self.worker_process
+            is not None
+        ):
             try:
                 self.worker_process.join(
                     timeout=1
@@ -537,8 +676,6 @@ class TranscribeApp:
         self._close_event_queue()
 
     def _close_event_queue(self):
-        """multiprocessing Queueを閉じる。"""
-
         if self.event_queue is None:
             return
 
@@ -551,15 +688,10 @@ class TranscribeApp:
         self.event_queue = None
 
     # =========================================
-    # アプリ終了
+    # Close application
     # =========================================
 
     def close_application(self):
-        """
-        ウィンドウを閉じた場合も
-        Whisper Processを終了する。
-        """
-
         if self._is_running():
             try:
                 self.worker_process.terminate()
@@ -578,13 +710,13 @@ class TranscribeApp:
         self.view.close()
 
     # =========================================
-    # 状態確認
+    # State
     # =========================================
 
     def _is_running(self):
-        """Whisper Processが実行中か確認する。"""
-
         return (
-            self.worker_process is not None
-            and self.worker_process.is_alive()
+            self.worker_process
+            is not None
+            and self.worker_process
+            .is_alive()
         )
