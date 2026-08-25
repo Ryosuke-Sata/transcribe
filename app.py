@@ -101,15 +101,11 @@ class TranscribeApp:
         self.view.reset_progress_display()
 
         self.view.set_status(
-            f"Whisperモデル "
-            f"'{model_name}' "
-            "を読み込んでいます..."
+            "実行環境を準備しています..."
         )
 
         self.view.append_log(
-            f"Whisperモデル "
-            f"'{model_name}' "
-            "の読み込みを開始します。"
+            "実行環境の確認を開始します。"
         )
 
         self.view.start_indeterminate_progress()
@@ -258,6 +254,26 @@ class TranscribeApp:
 
                 if (
                     event_type
+                    == "ffmpeg_checking"
+                ):
+                    self._handle_ffmpeg_checking()
+
+                elif (
+                    event_type
+                    == "ffmpeg_download_started"
+                ):
+                    self._handle_ffmpeg_download_started()
+
+                elif (
+                    event_type
+                    == "ffmpeg_ready"
+                ):
+                    self._handle_ffmpeg_ready(
+                        event
+                    )
+
+                elif (
+                    event_type
                     == "model_loaded"
                 ):
                     self._handle_model_loaded(
@@ -324,6 +340,72 @@ class TranscribeApp:
 
         except queue.Empty:
             pass
+
+    # =========================================
+    # FFmpeg
+    # =========================================
+
+    def _handle_ffmpeg_checking(
+        self,
+    ):
+        self.view.set_status(
+            "FFmpegを確認しています..."
+        )
+
+        self.view.append_log(
+            "FFmpegの確認を開始します。"
+        )
+
+    def _handle_ffmpeg_download_started(
+        self,
+    ):
+        self.view.set_status(
+            "FFmpegを初回ダウンロードしています..."
+        )
+
+        self.view.append_log(
+            "FFmpegが見つからないため、"
+            "初回ダウンロードを開始します。"
+        )
+
+    def _handle_ffmpeg_ready(
+        self,
+        event,
+    ):
+        (
+            _,
+            ffmpeg_path,
+            downloaded,
+            model_name,
+        ) = event
+
+        if downloaded:
+            self.view.append_log(
+                "FFmpegのダウンロードが"
+                "完了しました。"
+            )
+
+        else:
+            self.view.append_log(
+                "保存済みのFFmpegを"
+                "使用します。"
+            )
+
+        self.view.append_log(
+            f"FFmpeg: {ffmpeg_path}"
+        )
+
+        self.view.set_status(
+            f"Whisperモデル "
+            f"'{model_name}' "
+            "を読み込んでいます..."
+        )
+
+        self.view.append_log(
+            f"Whisperモデル "
+            f"'{model_name}' "
+            "の読み込みを開始します。"
+        )
 
     # =========================================
     # Model

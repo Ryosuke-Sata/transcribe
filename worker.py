@@ -3,6 +3,7 @@
 import csv
 import os
 
+from ffmpeg_manager import ensure_ffmpeg
 from formatter import (
     SentenceFormatter,
     format_timestamp_range,
@@ -27,6 +28,45 @@ def transcribe_worker(
     """
 
     try:
+        # =====================================
+        # FFmpeg準備
+        # =====================================
+
+        event_queue.put(
+            (
+                "ffmpeg_checking",
+            )
+        )
+
+        def on_ffmpeg_download_start():
+            event_queue.put(
+                (
+                    "ffmpeg_download_started",
+                )
+            )
+
+        (
+            ffmpeg_path,
+            downloaded,
+        ) = ensure_ffmpeg(
+            on_download_start=(
+                on_ffmpeg_download_start
+            )
+        )
+
+        event_queue.put(
+            (
+                "ffmpeg_ready",
+                str(ffmpeg_path),
+                downloaded,
+                model_name,
+            )
+        )
+
+        # =====================================
+        # Whisper
+        # =====================================
+
         transcriber = WhisperTranscriber()
 
         # =====================================

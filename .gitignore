@@ -229,6 +229,7 @@ __marimo__/
 # Generated transcription files
 *.txt
 !requirements.txt
+!requirements-build.txt
 
 
 # Antigravity CLI
