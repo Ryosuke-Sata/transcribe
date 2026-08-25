@@ -1,0 +1,191 @@
+Transcribe - Third-Party Notices
+=================================
+
+This application includes or depends on third-party software.
+The corresponding license and notice files collected from the build environment are stored in the third_party_licenses directory.
+
+Python runtime dependencies
+---------------------------
+
+certifi 2026.5.20
+License: MPL-2.0
+Project: https://github.com/certifi/python-certifi
+Project URL: Source, https://github.com/certifi/python-certifi
+
+charset-normalizer 3.4.7
+License: MIT
+Project URL: Changelog, https://github.com/jawah/charset_normalizer/blob/master/CHANGELOG.md
+Project URL: Documentation, https://charset-normalizer.readthedocs.io/
+Project URL: Code, https://github.com/jawah/charset_normalizer
+Project URL: Issue tracker, https://github.com/jawah/charset_normalizer/issues
+
+colorama 0.4.6
+License: See bundled license files
+Project URL: Homepage, https://github.com/tartley/colorama
+
+filelock 3.29.1
+License: MIT
+Project URL: Documentation, https://py-filelock.readthedocs.io
+Project URL: Homepage, https://github.com/tox-dev/py-filelock
+Project URL: Source, https://github.com/tox-dev/py-filelock
+Project URL: Tracker, https://github.com/tox-dev/py-filelock/issues
+
+fsspec 2026.4.0
+License: BSD-3-Clause
+Project URL: Changelog, https://filesystem-spec.readthedocs.io/en/latest/changelog.html
+Project URL: Documentation, https://filesystem-spec.readthedocs.io/en/latest/
+Project URL: Homepage, https://github.com/fsspec/filesystem_spec
+
+idna 3.18
+License: BSD-3-Clause
+Project URL: Changelog, https://github.com/kjd/idna/blob/master/HISTORY.md
+Project URL: Issue tracker, https://github.com/kjd/idna/issues
+Project URL: Source, https://github.com/kjd/idna
+
+Jinja2 3.1.6
+License: See bundled license files
+Project URL: Changes, https://jinja.palletsprojects.com/changes/
+Project URL: Chat, https://discord.gg/pallets
+Project URL: Documentation, https://jinja.palletsprojects.com/
+Project URL: Donate, https://palletsprojects.com/donate
+Project URL: Source, https://github.com/pallets/jinja/
+
+llvmlite 0.47.0
+License: BSD-2-Clause AND Apache-2.0 WITH LLVM-exception
+Project: http://llvmlite.readthedocs.io
+Project URL: Source, https://github.com/numba/llvmlite
+
+MarkupSafe 3.0.3
+License: BSD-3-Clause
+Project URL: Donate, https://palletsprojects.com/donate
+Project URL: Documentation, https://markupsafe.palletsprojects.com/
+Project URL: Changes, https://markupsafe.palletsprojects.com/page/changes/
+Project URL: Source, https://github.com/pallets/markupsafe/
+Project URL: Chat, https://discord.gg/pallets
+
+more-itertools 11.1.0
+License: MIT
+Project URL: Documentation, https://more-itertools.readthedocs.io/en/stable/
+Project URL: Homepage, https://github.com/more-itertools/more-itertools
+
+mpmath 1.3.0
+License: BSD
+Project: http://mpmath.org/
+Project URL: Source, https://github.com/fredrik-johansson/mpmath
+Project URL: Tracker, https://github.com/fredrik-johansson/mpmath/issues
+Project URL: Documentation, http://mpmath.org/doc/current/
+
+networkx 3.6.1
+License: BSD-3-Clause
+Project URL: Homepage, https://networkx.org/
+Project URL: Bug Tracker, https://github.com/networkx/networkx/issues
+Project URL: Documentation, https://networkx.org/documentation/stable/
+Project URL: Source Code, https://github.com/networkx/networkx
+
+numba 0.65.1
+License: BSD
+Project: https://numba.pydata.org
+
+numpy 2.4.6
+License: BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0
+Project URL: homepage, https://numpy.org
+Project URL: documentation, https://numpy.org/doc/
+Project URL: source, https://github.com/numpy/numpy
+Project URL: download, https://pypi.org/project/numpy/#files
+Project URL: tracker, https://github.com/numpy/numpy/issues
+Project URL: release notes, https://numpy.org/doc/stable/release
+
+openai-whisper 20250625
+License: MIT
+Project URL: Homepage, https://github.com/openai/whisper
+
+regex 2026.5.9
+License: Apache-2.0 AND CNRI-Python
+Project URL: Homepage, https://github.com/mrabarnett/mrab-regex
+
+requests 2.34.2
+License: Apache-2.0
+Project URL: Documentation, https://requests.readthedocs.io
+Project URL: Source, https://github.com/psf/requests
+
+setuptools 81.0.0
+License: MIT
+Project URL: Source, https://github.com/pypa/setuptools
+Project URL: Documentation, https://setuptools.pypa.io/
+Project URL: Changelog, https://setuptools.pypa.io/en/stable/history.html
+
+sympy 1.14.0
+License: BSD
+Project: https://sympy.org
+Project URL: Source, https://github.com/sympy/sympy
+
+tiktoken 0.13.0
+License: See bundled license files
+Project URL: homepage, https://github.com/openai/tiktoken
+Project URL: repository, https://github.com/openai/tiktoken
+Project URL: changelog, https://github.com/openai/tiktoken/blob/main/CHANGELOG.md
+
+torch 2.12.0
+License: BSD-3-Clause
+Project URL: Homepage, https://pytorch.org
+Project URL: Repository, https://github.com/pytorch/pytorch
+Project URL: Documentation, https://pytorch.org/docs
+Project URL: Issue Tracker, https://github.com/pytorch/pytorch/issues
+Project URL: Forum, https://discuss.pytorch.org
+
+tqdm 4.67.3
+License: MPL-2.0 AND MIT
+Project URL: homepage, https://tqdm.github.io
+Project URL: repository, https://github.com/tqdm/tqdm
+Project URL: changelog, https://tqdm.github.io/releases
+Project URL: wiki, https://github.com/tqdm/tqdm/wiki
+
+typing_extensions 4.15.0
+License: PSF-2.0
+Project URL: Bug Tracker, https://github.com/python/typing_extensions/issues
+Project URL: Changes, https://github.com/python/typing_extensions/blob/main/CHANGELOG.md
+Project URL: Documentation, https://typing-extensions.readthedocs.io/
+Project URL: Home, https://github.com/python/typing_extensions
+Project URL: Q & A, https://github.com/python/typing/discussions
+Project URL: Repository, https://github.com/python/typing_extensions
+
+urllib3 2.7.0
+License: MIT
+Project URL: Changelog, https://github.com/urllib3/urllib3/blob/main/CHANGES.rst
+Project URL: Documentation, https://urllib3.readthedocs.io
+Project URL: Code, https://github.com/urllib3/urllib3
+Project URL: Issue tracker, https://github.com/urllib3/urllib3/issues
+
+Python
+------
+
+Python 3.14.0 is included in the packaged application.
+Python is distributed under the Python Software Foundation License.
+See third_party_licenses/Python-* for the license text.
+
+Tcl/Tk
+------
+
+Tkinter uses Tcl/Tk.
+Available Tcl/Tk license.terms files from the Python installation are included under third_party_licenses/Tcl-Tk.
+
+FFmpeg
+------
+
+FFmpeg is not included in the Transcribe distribution archive.
+When required, Transcribe downloads an FFmpeg Windows x86_64 LGPL build provided by BtbN/FFmpeg-Builds.
+The selected FFmpeg build is used as a separate executable.
+FFmpeg is licensed under the GNU Lesser General Public License version 2.1 or later when built without GPL-only components.
+BtbN/FFmpeg-Builds is a third-party build provider and is not the author of FFmpeg.
+
+PyInstaller
+-----------
+
+PyInstaller is used as the application packaging tool.
+The PyInstaller bootloader exception permits applications built with PyInstaller to be distributed under a separate license.
+
+Disclaimer
+----------
+
+Third-party software remains subject to its respective copyright and license terms.
+This notice does not replace the original license files included in third_party_licenses.

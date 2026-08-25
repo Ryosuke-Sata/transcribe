@@ -231,8 +231,14 @@ __marimo__/
 *.txt
 !requirements.txt
 !requirements-build.txt
+!THIRD_PARTY_NOTICES.txt
 
 
 # Antigravity CLI
 .antigravitycli
 
+# zip files
+*.zip
+
+# Generated third-party license files
+third_party_licenses/
