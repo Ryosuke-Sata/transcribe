@@ -1,17 +1,25 @@
-import multiprocessing
-import tkinter as tk
+"""Transcribeのエントリーポイント。"""
 
-from app import TranscribeApp
+import multiprocessing
 
 
 def main():
+    import tkinter as tk
+
+    from app import TranscribeApp
+
     root = tk.Tk()
-    TranscribeApp(root)
+
+    TranscribeApp(
+        root
+    )
+
     root.mainloop()
 
 
 if __name__ == "__main__":
-    # Windows / PyInstallerでmultiprocessingを使うために必要
+    # PyInstallerでmultiprocessingを使用するために必要。
+    # GUIやWhisperを読み込む前に実行する。
     multiprocessing.freeze_support()
 
     main()
