@@ -86,12 +86,11 @@ class WhisperTranscriber:
             # ターミナルへの出力を抑制
             "verbose": None,
 
-            # 前区間の文字列を次区間のpromptとして使用しない。
-            # これまでの実音声で、この設定の方が
-            # 文字起こし結果が安定していたためFalseとする。
+            # 前区間の認識結果を、
+            # 次区間を認識するときの文脈として利用する。
             "condition_on_previous_text": True,
 
-            # 今回はWhisper自身のsegmentをそのまま使用する。
+            # Whisper自身のsegment timestampを使用するため、
             # 単語単位のtimestampは取得しない。
             "word_timestamps": False,
 

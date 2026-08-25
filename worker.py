@@ -20,7 +20,10 @@ def transcribe_worker(
     複数ファイルを順番に文字起こしする。
 
     各音声ファイルはWhisperへ1回だけ渡し、
-    Whisper内部で確定したsegmentを逐次保存する。
+    Whisper内部で確定したsegmentを取得する。
+
+    segmentは一定文字数以下になるようにまとめ、
+    確定したまとまりを逐次保存する。
     """
 
     try:
@@ -141,9 +144,15 @@ def _transcribe_one_file(
         )
     )
 
-    # Whisper segmentを
-    # 最低限整形するFormatter
-    formatter = SentenceFormatter()
+    # =====================================
+    # segment整形
+    #
+    # 複数segmentを100文字以下になる範囲でまとめる。
+    # =====================================
+
+    formatter = SentenceFormatter(
+        max_chars=100,
+    )
 
     # Observer経由で何segment取得できたか
     observed_segment_count = 0
@@ -158,6 +167,7 @@ def _transcribe_one_file(
         encoding="utf-8",
         newline="",
     ) as output_file:
+
         writer = csv.writer(
             output_file,
             lineterminator="\n",
@@ -165,7 +175,7 @@ def _transcribe_one_file(
         )
 
         # =================================
-        # 1つのsegmentを保存
+        # 確定したsegmentグループを保存
         # =================================
 
         def save_sentence(
@@ -186,11 +196,11 @@ def _transcribe_one_file(
             )
 
             # =================================
-            # 重要
+            # 確定したまとまりごとに
+            # ディスクへ即座に反映する。
             #
-            # 1segmentごとにディスクへ反映する。
             # 処理を途中停止しても、
-            # ここまでの結果は残る。
+            # ここまで確定した結果は残る。
             # =================================
 
             output_file.flush()
@@ -226,13 +236,18 @@ def _transcribe_one_file(
             )
 
             for segment in new_segments:
-                sentences = (
+
+                completed_sentences = (
                     formatter.push_segment(
                         segment
                     )
                 )
 
-                for sentence in sentences:
+                # 文字数条件によって
+                # 確定したまとまりだけ保存する。
+                for sentence in (
+                    completed_sentences
+                ):
                     save_sentence(
                         sentence
                     )
@@ -272,7 +287,7 @@ def _transcribe_one_file(
         # =====================================
         # 文字起こし
         #
-        # 音声全体を1回だけWhisperへ渡す
+        # 音声全体を1回だけWhisperへ渡す。
         # =====================================
 
         result = (
@@ -287,7 +302,7 @@ def _transcribe_one_file(
         # =====================================
         # Observerがsegmentを取得できなかった場合
         #
-        # Whisperの内部実装変更などへのfallback
+        # Whisper内部実装変更などへのfallback。
         # =====================================
 
         if (
@@ -299,20 +314,25 @@ def _transcribe_one_file(
             for segment in (
                 result["segments"]
             ):
-                sentences = (
+
+                completed_sentences = (
                     formatter.push_segment(
                         segment
                     )
                 )
 
-                for sentence in sentences:
+                for sentence in (
+                    completed_sentences
+                ):
                     save_sentence(
                         sentence
                     )
 
-        # 現在のFormatterでは
-        # バッファを持たないが、
-        # 将来の拡張を考えて呼んでおく。
+        # =====================================
+        # 音声終了時、
+        # 最後にバッファへ残っているsegment群を保存
+        # =====================================
+
         for sentence in (
             formatter.flush()
         ):
