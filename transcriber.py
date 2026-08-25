@@ -1,7 +1,11 @@
-"""Whisperモデルの読み込みと音声区間の文字起こし。"""
+"""Whisperモデルの読み込みと文字起こし処理。"""
+
+import os
 
 import whisper
 from whisper.audio import SAMPLE_RATE
+
+from whisper_observer import WhisperTranscribeObserver
 
 
 class WhisperTranscriber:
@@ -29,33 +33,48 @@ class WhisperTranscriber:
     @staticmethod
     def load_audio(audio_path):
         """
-        音声ファイルを16kHz・monoのNumPy配列として読み込む。
+        音声ファイルを16kHz monoのNumPy配列として読み込む。
+
+        Returns:
+            tuple:
+                音声データ
+                音声時間（秒）
         """
 
-        return whisper.load_audio(
+        if not os.path.isfile(
+            audio_path
+        ):
+            raise FileNotFoundError(
+                "ファイルが見つかりません: "
+                f"{audio_path}"
+            )
+
+        audio = whisper.load_audio(
             audio_path
         )
 
-    def transcribe_chunk(
+        duration = (
+            len(audio)
+            / SAMPLE_RATE
+        )
+
+        return (
+            audio,
+            duration,
+        )
+
+    def transcribe_audio(
         self,
-        audio_chunk,
+        audio,
         language=None,
+        on_segments=None,
+        on_progress=None,
     ):
         """
-        音声の1区間を文字起こしする。
+        音声全体を1回のWhisper transcribe()で処理する。
 
-        Args:
-            audio_chunk:
-                Whisperで読み込んだ音声データ
-
-            language:
-                None -> 自動判定
-                "en" -> 英語
-                "ja" -> 日本語
-                "ko" -> 韓国語
-
-        Returns:
-            Whisperのsegment一覧
+        Whisper内部でsegmentが確定した時点と、
+        処理位置が進んだ時点をObserverから通知する。
         """
 
         if self.model is None:
@@ -64,29 +83,32 @@ class WhisperTranscriber:
             )
 
         options = {
-            "verbose": False,
-            "condition_on_previous_text": False,
+            # ターミナルへの出力を抑制
+            "verbose": None,
+
+            # 前区間の文字列を次区間のpromptとして使用しない。
+            # これまでの実音声で、この設定の方が
+            # 文字起こし結果が安定していたためFalseとする。
+            "condition_on_previous_text": True,
+
+            # 今回はWhisper自身のsegmentをそのまま使用する。
+            # 単語単位のtimestampは取得しない。
+            "word_timestamps": False,
+
             "task": "transcribe",
         }
 
         if language is not None:
             options["language"] = language
 
-        result = self.model.transcribe(
-            audio_chunk,
-            **options,
+        observer = WhisperTranscribeObserver(
+            on_segments=on_segments,
+            on_progress=on_progress,
         )
 
-        return result.get(
-            "segments",
-            [],
-        )
-
-    @staticmethod
-    def get_duration_seconds(audio):
-        """読み込み済み音声の長さを秒で返す。"""
-
-        return (
-            len(audio)
-            / SAMPLE_RATE
+        return observer.run(
+            lambda: self.model.transcribe(
+                audio,
+                **options,
+            )
         )

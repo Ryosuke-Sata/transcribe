@@ -1,24 +1,13 @@
 """Whisper文字起こしを別Processで実行するWorker。"""
 
+import csv
 import os
-
-from whisper.audio import (
-    CHUNK_LENGTH,
-    SAMPLE_RATE,
-)
 
 from formatter import (
     SentenceFormatter,
-    format_sentence_line,
+    format_timestamp_range,
 )
-from transcriber import (
-    WhisperTranscriber,
-)
-
-
-# Whisper標準チャンク長
-# 現在は30秒
-CHUNK_SECONDS = CHUNK_LENGTH
+from transcriber import WhisperTranscriber
 
 
 def transcribe_worker(
@@ -30,14 +19,12 @@ def transcribe_worker(
     """
     複数ファイルを順番に文字起こしする。
 
-    確定した文章は即座にtxtへ保存し、
-    GUIへ進捗情報を送信する。
+    各音声ファイルはWhisperへ1回だけ渡し、
+    Whisper内部で確定したsegmentを逐次保存する。
     """
 
     try:
-        transcriber = (
-            WhisperTranscriber()
-        )
+        transcriber = WhisperTranscriber()
 
         # =====================================
         # Whisperモデル読み込み
@@ -91,7 +78,7 @@ def transcribe_worker(
                 )
 
         # =====================================
-        # 全ファイル終了
+        # 全ファイル完了
         # =====================================
 
         event_queue.put(
@@ -117,35 +104,19 @@ def _transcribe_one_file(
     total_files,
     language,
 ):
-    """1ファイルをチャンク単位で処理する。"""
-
-    if not os.path.isfile(
-        audio_path
-    ):
-        raise FileNotFoundError(
-            "ファイルが見つかりません: "
-            f"{audio_path}"
-        )
+    """
+    1つの音声ファイルをWhisperで連続的に処理する。
+    """
 
     # =====================================
     # 音声読み込み
     # =====================================
 
-    audio = (
-        transcriber.load_audio(
-            audio_path
-        )
-    )
-
-    total_seconds = (
-        transcriber
-        .get_duration_seconds(
-            audio
-        )
-    )
-
-    total_samples = len(
-        audio
+    (
+        audio,
+        total_seconds,
+    ) = transcriber.load_audio(
+        audio_path
     )
 
     # =====================================
@@ -170,131 +141,122 @@ def _transcribe_one_file(
         )
     )
 
-    # =====================================
-    # 文章整形
-    # =====================================
+    # Whisper segmentを
+    # 最低限整形するFormatter
+    formatter = SentenceFormatter()
 
-    formatter = (
-        SentenceFormatter(
-            pause_threshold=1.2,
-            max_duration=25.0,
-            max_chars=180,
-        )
-    )
-
-    chunk_samples = int(
-        CHUNK_SECONDS
-        * SAMPLE_RATE
-    )
+    # Observer経由で何segment取得できたか
+    observed_segment_count = 0
 
     # =====================================
-    # txtを文字起こし開始時点で作る
+    # 出力ファイル
     # =====================================
 
     with open(
         output_path,
         "w",
         encoding="utf-8",
+        newline="",
     ) as output_file:
+        writer = csv.writer(
+            output_file,
+            lineterminator="\n",
+            quoting=csv.QUOTE_MINIMAL,
+        )
 
         # =================================
-        # 30秒ごとに処理
+        # 1つのsegmentを保存
         # =================================
 
-        for chunk_start in range(
-            0,
-            total_samples,
-            chunk_samples,
+        def save_sentence(
+            sentence,
         ):
-            chunk_end = min(
-                chunk_start
-                + chunk_samples,
-                total_samples,
-            )
-
-            audio_chunk = audio[
-                chunk_start:chunk_end
-            ]
-
-            chunk_offset = (
-                chunk_start
-                / SAMPLE_RATE
-            )
-
-            # =============================
-            # Whisper
-            # =============================
-
-            segments = (
-                transcriber
-                .transcribe_chunk(
-                    audio_chunk,
-                    language,
+            timestamp = (
+                format_timestamp_range(
+                    sentence
                 )
             )
 
-            # =============================
-            # segmentを文章化
-            # =============================
+            # CSVとして正しく保存
+            writer.writerow(
+                [
+                    timestamp,
+                    sentence.text,
+                ]
+            )
 
-            for segment in segments:
-                start = (
-                    chunk_offset
-                    + float(
-                        segment.get(
-                            "start",
-                            0.0,
-                        )
-                    )
+            # =================================
+            # 重要
+            #
+            # 1segmentごとにディスクへ反映する。
+            # 処理を途中停止しても、
+            # ここまでの結果は残る。
+            # =================================
+
+            output_file.flush()
+
+            # GUI表示用
+            display_line = (
+                f"{timestamp}, "
+                f"{sentence.text}"
+            )
+
+            event_queue.put(
+                (
+                    "text_saved",
+                    file_index,
+                    total_files,
+                    audio_path,
+                    output_path,
+                    display_line,
                 )
+            )
 
-                end = (
-                    chunk_offset
-                    + float(
-                        segment.get(
-                            "end",
-                            0.0,
-                        )
-                    )
-                )
+        # =================================
+        # Whisper segment通知
+        # =================================
 
-                text = (
-                    segment.get(
-                        "text",
-                        "",
-                    )
-                )
+        def on_segments(
+            new_segments,
+        ):
+            nonlocal observed_segment_count
 
-                completed_sentences = (
+            observed_segment_count += len(
+                new_segments
+            )
+
+            for segment in new_segments:
+                sentences = (
                     formatter.push_segment(
-                        start=start,
-                        end=end,
-                        text=text,
+                        segment
                     )
                 )
 
-                for sentence in (
-                    completed_sentences
-                ):
-                    _save_sentence(
-                        output_file=output_file,
-                        event_queue=event_queue,
-                        sentence=sentence,
-                        file_index=file_index,
-                        total_files=total_files,
-                        audio_path=audio_path,
-                        output_path=output_path,
+                for sentence in sentences:
+                    save_sentence(
+                        sentence
                     )
 
-            # =============================
-            # GUI進捗更新
-            # =============================
+        # =================================
+        # Whisper進捗通知
+        # =================================
 
-            processed_seconds = min(
-                chunk_end
-                / SAMPLE_RATE,
-                total_seconds,
-            )
+        def on_progress(
+            processed_seconds,
+            detected_total_seconds,
+        ):
+            if (
+                detected_total_seconds
+                > 0
+            ):
+                progress_total = (
+                    detected_total_seconds
+                )
+
+            else:
+                progress_total = (
+                    total_seconds
+                )
 
             event_queue.put(
                 (
@@ -303,29 +265,78 @@ def _transcribe_one_file(
                     total_files,
                     audio_path,
                     processed_seconds,
-                    total_seconds,
+                    progress_total,
                 )
             )
 
-        # =================================
-        # 最後に残っている文章を保存
-        # =================================
+        # =====================================
+        # 文字起こし
+        #
+        # 音声全体を1回だけWhisperへ渡す
+        # =====================================
 
+        result = (
+            transcriber.transcribe_audio(
+                audio=audio,
+                language=language,
+                on_segments=on_segments,
+                on_progress=on_progress,
+            )
+        )
+
+        # =====================================
+        # Observerがsegmentを取得できなかった場合
+        #
+        # Whisperの内部実装変更などへのfallback
+        # =====================================
+
+        if (
+            observed_segment_count == 0
+            and result.get(
+                "segments"
+            )
+        ):
+            for segment in (
+                result["segments"]
+            ):
+                sentences = (
+                    formatter.push_segment(
+                        segment
+                    )
+                )
+
+                for sentence in sentences:
+                    save_sentence(
+                        sentence
+                    )
+
+        # 現在のFormatterでは
+        # バッファを持たないが、
+        # 将来の拡張を考えて呼んでおく。
         for sentence in (
             formatter.flush()
         ):
-            _save_sentence(
-                output_file=output_file,
-                event_queue=event_queue,
-                sentence=sentence,
-                file_index=file_index,
-                total_files=total_files,
-                audio_path=audio_path,
-                output_path=output_path,
+            save_sentence(
+                sentence
             )
 
     # =====================================
-    # ファイル終了
+    # 100%まで進捗更新
+    # =====================================
+
+    event_queue.put(
+        (
+            "file_progress",
+            file_index,
+            total_files,
+            audio_path,
+            total_seconds,
+            total_seconds,
+        )
+    )
+
+    # =====================================
+    # ファイル完了
     # =====================================
 
     event_queue.put(
@@ -336,49 +347,5 @@ def _transcribe_one_file(
             audio_path,
             output_path,
             total_seconds,
-        )
-    )
-
-
-def _save_sentence(
-    output_file,
-    event_queue,
-    sentence,
-    file_index,
-    total_files,
-    audio_path,
-    output_path,
-):
-    """確定した文章を即座にtxtへ保存する。"""
-
-    line = (
-        format_sentence_line(
-            sentence
-        )
-    )
-
-    output_file.write(
-        line
-        + "\n"
-    )
-
-    # =====================================
-    # 重要
-    #
-    # 停止されても、それまでの結果が
-    # ファイルに残るよう即flushする
-    # =====================================
-
-    output_file.flush()
-
-    # GUIにも直近の文字起こしを通知
-    event_queue.put(
-        (
-            "text_saved",
-            file_index,
-            total_files,
-            audio_path,
-            output_path,
-            line,
         )
     )

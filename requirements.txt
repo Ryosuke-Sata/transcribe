@@ -1,1 +1,1 @@
-openai-whisper
+openai-whisper==20250625
