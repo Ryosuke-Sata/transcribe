@@ -75,6 +75,9 @@ ZIPファイルを任意の場所へ展開してください。
 ```text
 Transcribe/
 ├─ Transcribe.exe
+├─ LICENSE
+├─ README.md
+├─ BUILD_DEPENDENCIES.txt
 ├─ THIRD_PARTY_NOTICES.txt
 ├─ third_party_licenses/
 └─ _internal/
@@ -350,33 +353,46 @@ third_party_licenses/
 
 `third_party_licenses/` は生成物のためGitでは管理せず、Windows配布ZIPへ含めます。
 
-## Release Archive
+## Automated Build and Release
 
-配布フォルダへライセンス情報をコピーします。
+GitHub Actionsの `.github/workflows/release.yml` がWindows x64版を自動ビルドします。
 
-```powershell
-Copy-Item `
-    .\THIRD_PARTY_NOTICES.txt `
-    .\dist\Transcribe\ `
-    -Force
+| 操作 | 実行内容 |
+| --- | --- |
+| `develop` / `main` へのpush、これらを対象とするPR | テスト・EXEビルド・起動確認・ZIP作成。成果物はActionsからダウンロード可能 |
+| `v1.1.0` などのタグをpush | 上記の確認に成功した後、GitHub Releaseと配布ZIP・SHA-256を自動公開 |
+| `v1.1.0-rc.1` などのタグをpush | プレリリースとして自動公開 |
+| Actionsの「Run workflow」 | ビルド確認のみ。リリースは公開しない |
 
-Copy-Item `
-    .\third_party_licenses `
-    .\dist\Transcribe\third_party_licenses `
-    -Recurse `
-    -Force
-```
+タグは `vX.Y.Z` または `vX.Y.Z-alpha.N` / `-beta.N` / `-rc.N` 形式です。タグが指すコミットのソースをビルドします。ワークフローファイルを含むコミットにタグを付けてください。
 
-その後、配布フォルダをZIP化します。
+例えば、動画対応を含む版を `v1.1.0` として公開する場合:
 
 ```powershell
-Compress-Archive `
-    -Path .\dist\Transcribe\* `
-    -DestinationPath .\Transcribe-v1.0.0-win-x64.zip `
-    -Force
+git switch develop
+git pull --ff-only origin develop
+git tag -a v1.1.0 -m "Transcribe v1.1.0"
+git push origin v1.1.0
 ```
 
-生成したZIPはGitリポジトリにはコミットせず、GitHub Releasesから配布します。
+これ以降のビルド・ライセンス収集・圧縮・リリースノート生成・公開は自動です。新しいリリースには毎回新しいタグを使用してください。既存の公開済みリリースや添付ファイルは上書きしません。失敗した実行はActionsから再実行できますが、既に公開済みのタグで公開処理を再実行すると失敗します。
+
+Python 3.14・PyInstallerを使い、配布容量を抑えるためPyTorchはCPU版をインストールします。モデルとFFmpegは従来どおり初回利用時に取得し、ZIPには含めません。CIの音声抽出テストで使うFFmpegも配布物へは同梱しません。
+
+ZIPには本体と実行環境のほか、MITの `LICENSE`、`THIRD_PARTY_NOTICES.txt`、`third_party_licenses/`、実際のビルド環境の依存バージョン一覧 `BUILD_DEPENDENCIES.txt` が入ります。ライセンス収集は `--strict` で実行し、収集対象のライセンスが見つからなければ公開しません。
+
+公開処理は標準の `GITHUB_TOKEN` を使用するため、追加の個人アクセストークンは不要です。リポジトリでGitHub Actionsの実行が許可されている必要があります。「Run workflow」を使うには、このワークフローをデフォルトブランチ（`main`）にも反映してください。
+
+## Manual Release Archive
+
+ローカルでビルド済みの `dist/Transcribe` から配布ZIPを作る場合:
+
+```powershell
+python .\collect_licenses.py --strict
+python .\scripts\package_release.py --version v1.1.0
+```
+
+`release/Transcribe-v1.1.0-win-x64.zip` と対応する `.zip.sha256` が生成されます。ZIP内部も検証してから出力します。生成物はGitへコミットしません。
 
 ## License
 

@@ -242,3 +242,5 @@ __marimo__/
 
 # Generated third-party license files
 third_party_licenses/
+# Automated release archives
+release/
