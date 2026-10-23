@@ -35,7 +35,7 @@ class WhisperTranscriber:
     @staticmethod
     def load_audio(audio_path):
         """
-        音声ファイルを16kHz monoのNumPy配列として読み込む。
+        音声・動画ファイルの音声を16kHz monoのNumPy配列として読み込む。
 
         WindowsではFFmpeg実行時に
         コンソールウィンドウを表示しない。
@@ -76,7 +76,7 @@ class WhisperTranscriber:
         audio_path,
     ):
         """
-        FFmpegを使用して音声を
+        FFmpegを使用して最初の音声トラックだけを
         16kHz mono PCMへ変換する。
 
         Whisperのload_audio()と同等の処理を行うが、
@@ -90,6 +90,11 @@ class WhisperTranscriber:
             "0",
             "-i",
             audio_path,
+            "-map",
+            "0:a:0",
+            "-vn",
+            "-sn",
+            "-dn",
             "-f",
             "s16le",
             "-ac",
@@ -136,8 +141,17 @@ class WhisperTranscriber:
                 )
             )
 
+            if (
+                "matches no streams" in error_message
+                and "0:a:0" in error_message
+            ):
+                raise RuntimeError(
+                    "選択したファイルに音声トラックがありません。"
+                    "音声を含む音声・動画ファイルを選択してください。"
+                ) from exc
+
             raise RuntimeError(
-                "音声ファイルの読み込みに"
+                "音声・動画ファイルの音声読み込みに"
                 "失敗しました。"
                 "\n"
                 f"{error_message}"
