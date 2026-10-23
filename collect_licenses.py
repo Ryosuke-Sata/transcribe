@@ -1,5 +1,6 @@
 """Transcribe配布用の第三者ライセンス情報を収集する。"""
 
+import argparse
 import importlib.metadata as metadata
 import platform
 import re
@@ -30,6 +31,7 @@ ROOT_PACKAGES = (
 # として含まれているため、明示的に収集する。
 ADDITIONAL_PACKAGES = (
     "setuptools",
+    "pyinstaller",
 )
 
 
@@ -770,6 +772,15 @@ def main():
     第三者ライセンス情報を生成する。
     """
 
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--strict", action="store_true",
+                        help="Fail when required license files are missing")
+    args = parser.parse_args()
+    if args.strict:
+        for name in ROOT_PACKAGES + ADDITIONAL_PACKAGES:
+            metadata.distribution(name)
+    missing_licenses = []
+
     # ======================================
     # 前回生成物を削除
     # ======================================
@@ -820,6 +831,9 @@ def main():
             )
         )
 
+        if copied_count == 0:
+            missing_licenses.append(name)
+
         print(
             f"  {name} "
             f"{version}: "
@@ -842,6 +856,14 @@ def main():
     tcl_tk_count = (
         copy_tcl_tk_licenses()
     )
+
+    if args.strict:
+        if not python_license_found:
+            missing_licenses.append("Python")
+        if sys.platform == "win32" and tcl_tk_count == 0:
+            missing_licenses.append("Tcl/Tk")
+        if missing_licenses:
+            raise RuntimeError("Missing license files: " + ", ".join(missing_licenses))
 
     # ======================================
     # Summary

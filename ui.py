@@ -26,18 +26,21 @@ class TranscribeView:
         "韓国語": "ko",
     }
 
-    AUDIO_FILETYPES = [
+    AUDIO_PATTERNS = "*.m4a *.mp3 *.wav *.flac *.aac *.ogg *.wma"
+    VIDEO_PATTERNS = "*.mp4 *.m4v *.mov *.mkv *.avi *.webm *.wmv *.flv *.mpg *.mpeg *.ts *.mts *.m2ts *.3gp"
+
+    MEDIA_FILETYPES = [
+        (
+            "音声・動画ファイル",
+            f"{AUDIO_PATTERNS} {VIDEO_PATTERNS}",
+        ),
         (
             "音声ファイル",
-            (
-                "*.m4a "
-                "*.mp3 "
-                "*.wav "
-                "*.flac "
-                "*.aac "
-                "*.ogg "
-                "*.wma"
-            ),
+            AUDIO_PATTERNS,
+        ),
+        (
+            "動画ファイル",
+            VIDEO_PATTERNS,
         ),
         (
             "すべてのファイル",
@@ -73,7 +76,7 @@ class TranscribeView:
         self.status_var = (
             tk.StringVar(
                 value=(
-                    "音声ファイルを"
+                    "音声・動画ファイルを"
                     "選択してください。"
                 )
             )
@@ -265,7 +268,7 @@ class TranscribeView:
             ttk.Button(
                 file_button_frame,
                 text=(
-                    "音声ファイルを選択"
+                    "音声・動画ファイルを選択"
                 ),
                 command=(
                     self
@@ -573,11 +576,11 @@ class TranscribeView:
             .askopenfilenames(
                 title=(
                     "文字起こしする"
-                    "音声ファイルを"
+                    "音声・動画ファイルを"
                     "選択してください"
                 ),
                 filetypes=(
-                    self.AUDIO_FILETYPES
+                    self.MEDIA_FILETYPES
                 ),
             )
         )
@@ -627,7 +630,7 @@ class TranscribeView:
         self.reset_progress_display()
 
         self.status_var.set(
-            "音声ファイルを"
+            "音声・動画ファイルを"
             "選択してください。"
         )
 

@@ -2,13 +2,14 @@
 
 OpenAI Whisperを利用した、Windows向けのローカル文字起こしアプリケーションです。
 
-GUIから音声ファイルを選択し、Whisperモデルと言語を指定して文字起こしできます。
+GUIから音声・動画ファイルを選択し、Whisperモデルと言語を指定して文字起こしできます。
 
 文字起こし処理はローカルPC上で実行され、音声データを外部の文字起こしAPIへ送信する必要はありません。
 
 ## Features
 
-- GUIによる音声ファイル選択
+- GUIによる音声・動画ファイル選択
+- 動画から音声のみを抽出して文字起こし
 - 複数ファイルの連続文字起こし
 - Whisperモデルの選択
   - `tiny`
@@ -34,7 +35,7 @@ GUIから音声ファイルを選択し、Whisperモデルと言語を指定し�
 
 - Windows x64
 
-## Supported Audio Formats
+## Supported Audio / Video Formats
 
 以下の音声ファイルをGUIから選択できます。
 
@@ -45,6 +46,15 @@ GUIから音声ファイルを選択し、Whisperモデルと言語を指定し�
 - `.aac`
 - `.ogg`
 - `.wma`
+
+以下の動画ファイルもGUIから選択できます。
+
+- `.mp4`, `.m4v`, `.mov`, `.mkv`, `.avi`, `.webm`, `.wmv`
+- `.flv`, `.mpg`, `.mpeg`, `.ts`, `.mts`, `.m2ts`, `.3gp`
+
+動画はFFmpegで最初の音声トラックのみを16kHz・モノラルに変換して文字起こしします。映像は処理せず、抽出した音声の中間ファイルも保存しません。音声トラックが複数ある場合は最初のトラックを使用します。音声トラックがない動画はエラーとして通知し、次のファイルの処理へ進みます。
+
+実際に読み込めるコーデックは使用するFFmpegに依存します。
 
 ## Installation
 
@@ -65,6 +75,9 @@ ZIPファイルを任意の場所へ展開してください。
 ```text
 Transcribe/
 ├─ Transcribe.exe
+├─ LICENSE
+├─ README.md
+├─ BUILD_DEPENDENCIES.txt
 ├─ THIRD_PARTY_NOTICES.txt
 ├─ third_party_licenses/
 └─ _internal/
@@ -135,9 +148,9 @@ large
 
 通常は「自動判定」のままでも利用できます。
 
-### 4. 音声ファイルを選択
+### 4. 音声・動画ファイルを選択
 
-「音声ファイルを選択」ボタンから文字起こしするファイルを選択します。
+「音声・動画ファイルを選択」ボタンから文字起こしするファイルを選択します。
 
 複数ファイルを同時に選択することもできます。
 
@@ -156,12 +169,12 @@ large
 
 ### 6. 結果を確認
 
-文字起こし結果は、元の音声ファイルと同じフォルダに保存されます。
+文字起こし結果は、元の音声・動画ファイルと同じフォルダに保存されます。
 
 例えば、
 
 ```text
-lecture.m4a
+lecture.mp4
 ```
 
 を文字起こしすると、
@@ -205,7 +218,7 @@ Whisperが生成したsegmentを基準として、複数segmentを一定文字�
 
 ## FFmpeg
 
-Whisperは音声ファイルの読み込みにFFmpegを使用します。
+音声・動画ファイルの音声読み込みにはFFmpegを使用します。
 
 TranscribeではFFmpegを配布ZIPへ直接同梱せず、必要になった際に以下のBtbN/FFmpeg-Buildsから取得します。
 
@@ -340,33 +353,46 @@ third_party_licenses/
 
 `third_party_licenses/` は生成物のためGitでは管理せず、Windows配布ZIPへ含めます。
 
-## Release Archive
+## Automated Build and Release
 
-配布フォルダへライセンス情報をコピーします。
+GitHub Actionsの `.github/workflows/release.yml` がWindows x64版を自動ビルドします。
 
-```powershell
-Copy-Item `
-    .\THIRD_PARTY_NOTICES.txt `
-    .\dist\Transcribe\ `
-    -Force
+| 操作 | 実行内容 |
+| --- | --- |
+| `develop` / `main` へのpush、これらを対象とするPR | テスト・EXEビルド・起動確認・ZIP作成。成果物はActionsからダウンロード可能 |
+| `v1.1.0` などのタグをpush | 上記の確認に成功した後、GitHub Releaseと配布ZIP・SHA-256を自動公開 |
+| `v1.1.0-rc.1` などのタグをpush | プレリリースとして自動公開 |
+| Actionsの「Run workflow」 | ビルド確認のみ。リリースは公開しない |
 
-Copy-Item `
-    .\third_party_licenses `
-    .\dist\Transcribe\third_party_licenses `
-    -Recurse `
-    -Force
-```
+タグは `vX.Y.Z` または `vX.Y.Z-alpha.N` / `-beta.N` / `-rc.N` 形式です。タグが指すコミットのソースをビルドします。ワークフローファイルを含むコミットにタグを付けてください。
 
-その後、配布フォルダをZIP化します。
+例えば、動画対応を含む版を `v1.1.0` として公開する場合:
 
 ```powershell
-Compress-Archive `
-    -Path .\dist\Transcribe\* `
-    -DestinationPath .\Transcribe-v1.0.0-win-x64.zip `
-    -Force
+git switch develop
+git pull --ff-only origin develop
+git tag -a v1.1.0 -m "Transcribe v1.1.0"
+git push origin v1.1.0
 ```
 
-生成したZIPはGitリポジトリにはコミットせず、GitHub Releasesから配布します。
+これ以降のビルド・ライセンス収集・圧縮・リリースノート生成・公開は自動です。新しいリリースには毎回新しいタグを使用してください。既存の公開済みリリースや添付ファイルは上書きしません。失敗した実行はActionsから再実行できますが、既に公開済みのタグで公開処理を再実行すると失敗します。
+
+Python 3.14・PyInstallerを使い、配布容量を抑えるためPyTorchはCPU版をインストールします。モデルとFFmpegは従来どおり初回利用時に取得し、ZIPには含めません。CIの音声抽出テストで使うFFmpegも配布物へは同梱しません。
+
+ZIPには本体と実行環境のほか、MITの `LICENSE`、`THIRD_PARTY_NOTICES.txt`、`third_party_licenses/`、実際のビルド環境の依存バージョン一覧 `BUILD_DEPENDENCIES.txt` が入ります。ライセンス収集は `--strict` で実行し、収集対象のライセンスが見つからなければ公開しません。
+
+公開処理は標準の `GITHUB_TOKEN` を使用するため、追加の個人アクセストークンは不要です。リポジトリでGitHub Actionsの実行が許可されている必要があります。「Run workflow」を使うには、このワークフローをデフォルトブランチ（`main`）にも反映してください。
+
+## Manual Release Archive
+
+ローカルでビルド済みの `dist/Transcribe` から配布ZIPを作る場合:
+
+```powershell
+python .\collect_licenses.py --strict
+python .\scripts\package_release.py --version v1.1.0
+```
+
+`release/Transcribe-v1.1.0-win-x64.zip` と対応する `.zip.sha256` が生成されます。ZIP内部も検証してから出力します。生成物はGitへコミットしません。
 
 ## License
 
